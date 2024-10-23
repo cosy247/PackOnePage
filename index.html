@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link rel="stylesheet" href="./css/index.css" />
+    <script src="./js/vue.min.js"></script>
+  </head>
+
+  <body>
+    <div id="app">
+      <input type="text" placeholder="目标地址" v-model="targetUrl" />
+      <button type="button" @click="pack">生成</button>
+      <div>{{message}}</div>
+    </div>
+  </body>
+
+  <script>
+    const domParser = new DOMParser();
+
+    new Vue({
+      el: '#app',
+      data() {
+        return {
+          targetUrl: 'http://127.0.0.1:5501/',
+          message: '输入地址，点击生成按钮打包html页面。',
+        };
+      },
+      methods: {
+        fetch(url) {
+          return new Promise((resolve) => {
+            fetch(url)
+              .then((response) => response.text())
+              .then((data) => resolve(data));
+          });
+        },
+        async pack() {
+          const url = this.targetUrl.trim();
+          if (url == '') return;
+          this.message = '打包中...';
+          const html = await this.fetch(url);
+          const htmlRoot = domParser.parseFromString(html, 'text/html');
+          for (const script of htmlRoot.querySelectorAll('script[src]')) {
+            let src = script.getAttribute('src');
+            if (!src.startsWith('http://') && !src.startsWith('https://')) {
+              src = `${url}/../${src}`;
+            }
+            const newScript = document.createElement('script');
+            newScript.innerHTML = await this.fetch(src);
+            script.parentElement.appendChild(newScript);
+            script.parentElement.removeChild(script);
+          }
+          for (const link of htmlRoot.querySelectorAll('link[rel="stylesheet"][href]')) {
+            let href = link.getAttribute('href');
+            if (!href.startsWith('http://') && !href.startsWith('https://')) {
+              href = `${url}/../${href}`;
+            }
+            const style = document.createElement('style');
+            style.innerHTML = await this.fetch(href);
+            link.parentElement.appendChild(style);
+            link.parentElement.removeChild(link);
+          }
+          const outerHTML = [...htmlRoot.childNodes].reduce((outerHTML, node) => {
+            return outerHTML + (node.outerHTML || '');
+          }, '<!DOCTYPE html>');
+          let filename = url.split("/").pop();
+          filename += filename.endsWith('.html') ? '' : '.html';
+          this.download(filename, outerHTML);
+          this.message = '输入地址，点击生成按钮打包html页面。';
+        },
+        download(filename, text) {
+          var element = document.createElement('a');
+          element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+          element.setAttribute('download', filename);
+          element.style.display = 'none';
+          document.body.appendChild(element);
+          element.click();
+          document.body.removeChild(element);
+        },
+      },
+    });
+  </script>
+</html>
