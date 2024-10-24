@@ -10,12 +10,18 @@ body {
   justify-content: center;
   min-width: 100vw;
   min-height: 100vh;
-  background: url(https://pic.netbian.com/uploads/allimg/241005/231720-1728141440ed3a.jpg) 50%/cover;
+  background: url('../imgs/back.jpg') 50% / cover;
+}
+
+.readonly {
+  pointer-events: none;
+  filter: grayscale(1);
 }
 
 .root {
   min-height: 80vh;
-  min-width: 70vw;
+  width: 75vw;
+  min-width: 900px;
   gap: 20px;
   display: flex;
   flex-direction: column;
@@ -23,13 +29,26 @@ body {
 
 .title {
   text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  backdrop-filter: blur(10px);
+  padding: 10px 50px;
+  width: fit-content;
+  margin: auto;
+  border-radius: 100px;
+  border: #fff 2px solid;
+}
+
+.title > img {
+  height: 1.4em;
 }
 
 .main {
   display: flex;
   gap: 20px;
   flex: 1;
-  border: 2px solid #9a8;
+  border: 2px solid #000a64;
   border-radius: 10px;
   padding: 20px;
   box-sizing: border-box;
@@ -39,10 +58,74 @@ body {
 
 .urlInput {
   display: flex;
-  gap: 20px;
+  width: 33%;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.urlInput-op {
+  display: flex;
+  gap: 5px;
+  width: 100%;
+}
+
+.urlInput input {
+  flex: 1;
+  border-color: #efe8;
 }
 
 .urlInput-historys {
-  position: absolute;
-  border: 1px solid #8a7;
+  flex: 1;
+  width: 100%;
+  border: 2px solid #fff;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.urlInput-history {
+  display: flex;
+  margin: 5px;
+  gap: 5px;
+  height: 30px;
+  animation: urlInputHistory 0.5s;
+}
+
+@keyframes urlInputHistory {
+  0% {
+    margin-top: -30px;
+  }
+}
+
+.urlInput-history-url {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 14px;
+  background: #efe8;
+  padding: 5px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.urlInput-history-url.current {
+  background: #fe65a688;
+}
+
+.detail {
+  display: flex;
+  flex: 2;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detail-fetchs {
+  flex: 1;
+  border: 2px solid #fff;
+  border-radius: 5px;
+  overflow: auto;
+}
+
+.detail-setting {
+  display: flex;
+  gap: 10px;
 }

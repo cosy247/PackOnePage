@@ -3,46 +3,114 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>PackOnePage</title>
     <link rel="stylesheet" href="./css/index.css" />
-    <link rel="stylesheet" href="./css/components.css">
+    <link rel="stylesheet" href="./css/components.css" />
+    <link rel="icon" href="./icon/icon.ico" />
     <script src="./js/vue.min.js"></script>
   </head>
 
   <body>
     <div class="root" id="app">
-      <h1 class="title">PackOnePage</h1>
+      <h1 class="title">
+        <img src="./icon/icon.png" alt="" />
+        PackOnePage
+      </h1>
       <div class="main">
         <div class="urlInput">
-          <input class="sInput" type="text" placeholder="目标地址" autocomplete v-model="targetUrl" />
-          <div class="sButton" @click="pack">生成</div>
+          <div class="urlInput-op">
+            <input class="sInput" type="text" placeholder="目标地址" autocomplete v-model="targetUrl" />
+            <div class="sButton" @click="analysisInput">分析</div>
+          </div>
+          <div class="urlInput-historys">
+            <div class="urlInput-history" v-for="history in historys" :key="history.id" :title="history.url">
+              <p class="urlInput-history-url" :class="{current : currentHistory.id === history.id}">{{history.url}}</p>
+              <div class="sButton readonly" v-show="history.status === -1" @click="analysis(history)">无法获取</div>
+              <div class="sButton" v-show="history.status === 0" @click="analysis(history)">分析</div>
+              <div class="sButton readonly" v-show="history.status === 1">分析中...</div>
+              <div class="sButton" v-show="history.status === 2" @click="pack(history)">打包</div>
+              <div class="sButton" v-show="history.status === 3" @click="download(history)">下载</div>
+            </div>
+          </div>
         </div>
-  
-        <div>{{message}}</div>
+        <div class="detail">
+          <div class="detail-fetchs">
+            <div class="detail-fetch" v-for="link in currentHistory.links">{{link.href}}</div>
+            <div class="detail-fetch" v-for="script in currentHistory.scripts">{{script.src}}</div>
+          </div>
+          <div class="detail-setting">
+            <div class="sButton">分析</div>
+            <div class="sButton">打包</div>
+            <div class="sButton">下载</div>
+          </div>
+        </div>
       </div>
     </div>
   </body>
 
   <script>
     const domParser = new DOMParser();
-
+    function perf_observer(list, observer) {
+      // Process the "resource" event
+    }
+    var observer2 = new PerformanceObserver(perf_observer);
+    observer2.observe({ entryTypes: ['resource'] });
     new Vue({
       el: '#app',
       data() {
         return {
-          targetUrl: 'http://127.0.0.1:5501/',
-          message: '输入地址，点击生成按钮打包html页面。',
+          targetUrl: window.location.href,
+          historys: [],
+          currentHistory: {},
         };
       },
       methods: {
         fetch(url) {
-          return new Promise((resolve) => {
+          return new Promise((resolve, reject) => {
             fetch(url)
               .then((response) => response.text())
-              .then((data) => resolve(data));
+              .then((data) => resolve(data))
+              .catch((error) => reject(error));
           });
         },
-        async pack() {
+        analysisInput() {
+          const url = this.targetUrl.trim();
+          if (url == '') return;
+          this.targetUrl = '';
+          const history = {
+            id: Date.now(),
+            // -1：网址错误 [待分析，分析中, 分析完成可组合资源，组合资源完成可下载]
+            status: 0,
+            url,
+            html: '',
+            links: [],
+            scripts: [],
+          };
+          this.currentHistory = history;
+          console.log(this.currentHistory);
+
+          this.historys.unshift(history);
+          this.analysis(history);
+        },
+        analysis(history) {
+          history.status = 1;
+          if (history.url.startsWith('http://') || history.url.startsWith('https://')) {
+            this.fetch(history.url)
+              .then((html) => {
+                history.html = html;
+                const htmlRoot = domParser.parseFromString(html, 'text/html');
+                history.scripts = htmlRoot.querySelectorAll('script[src]');
+                history.links = htmlRoot.querySelectorAll('link[rel="stylesheet"][href]');
+                history.status = 2;
+              })
+              .catch(() => {
+                history.status = -1;
+              });
+          } else {
+            history.status = -1;
+          }
+        },
+        async pack(history) {
           const url = this.targetUrl.trim();
           if (url == '') return;
           this.message = '打包中...';
@@ -71,11 +139,12 @@
           const outerHTML = [...htmlRoot.childNodes].reduce((outerHTML, node) => {
             return outerHTML + (node.outerHTML || '');
           }, '<!DOCTYPE html>');
-          let filename = url.split("/").pop();
+          let filename = url.split('/').pop();
           filename += filename.endsWith('.html') ? '' : '.html';
           this.download(filename, outerHTML);
           this.message = '输入地址，点击生成按钮打包html页面。';
         },
+        download(history) {},
         download(filename, text) {
           var element = document.createElement('a');
           element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));

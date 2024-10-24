@@ -6,6 +6,7 @@
   border-radius: 4px;
   cursor: pointer;
   color: #fff;
+  line-height: 1.15em;
 }
 
 .sButton:hover {
