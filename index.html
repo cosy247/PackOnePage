@@ -5,14 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
     <link rel="stylesheet" href="./css/index.css" />
+    <link rel="stylesheet" href="./css/components.css">
     <script src="./js/vue.min.js"></script>
   </head>
 
   <body>
-    <div id="app">
-      <input type="text" placeholder="目标地址" v-model="targetUrl" />
-      <button type="button" @click="pack">生成</button>
-      <div>{{message}}</div>
+    <div class="root" id="app">
+      <h1 class="title">PackOnePage</h1>
+      <div class="main">
+        <div class="urlInput">
+          <input class="sInput" type="text" placeholder="目标地址" autocomplete v-model="targetUrl" />
+          <div class="sButton" @click="pack">生成</div>
+        </div>
+  
+        <div>{{message}}</div>
+      </div>
     </div>
   </body>
 
