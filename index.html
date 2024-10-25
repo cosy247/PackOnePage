@@ -4,47 +4,62 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PackOnePage</title>
-    <link rel="stylesheet" href="./css/index.css" />
     <link rel="stylesheet" href="./css/components.css" />
+    <link rel="stylesheet" href="./css/index.css" />
     <link rel="icon" href="./icon/icon.ico" />
     <script src="./js/vue.min.js"></script>
   </head>
 
   <body>
+    <img class="background" src="./imgs/back.jpg" alt="" />
     <div class="root" id="app">
       <h1 class="title">
-        <img src="./icon/icon.png" alt="" />
+        <img class="title-icon" src="./icon/icon.png" alt="" />
         PackOnePage
+        <img class="title-help" src="./imgs//help.png" @click="showHelpBox" alt="" />
       </h1>
       <div class="main">
         <div class="urlInput">
           <div class="urlInput-op">
-            <input class="sInput" type="text" placeholder="目标地址" autocomplete v-model="targetUrl" />
+            <input class="sInput" type="text" placeholder="目标地址" v-model="targetUrl" />
             <div class="sButton" @click="analysisInput">分析</div>
           </div>
           <div class="urlInput-historys">
-            <div class="urlInput-history" v-for="history in historys" :key="history.id" :title="history.url">
+            <div class="urlInput-history" v-for="history in historys" :key="history.id" :title="history.url" @click="setCurrentHistory(history)">
               <p class="urlInput-history-url" :class="{current : currentHistory.id === history.id}">{{history.url}}</p>
               <div class="sButton readonly" v-show="history.status === -1" @click="analysis(history)">无法获取</div>
               <div class="sButton" v-show="history.status === 0" @click="analysis(history)">分析</div>
               <div class="sButton readonly" v-show="history.status === 1">分析中...</div>
-              <div class="sButton" v-show="history.status === 2" @click="pack(history)">打包</div>
-              <div class="sButton" v-show="history.status === 3" @click="download(history)">下载</div>
+              <div class="sButton" v-show="history.status === 2" @click="download(history)">下载</div>
             </div>
           </div>
         </div>
         <div class="detail">
           <div class="detail-fetchs">
-            <div class="detail-fetch" v-for="link in currentHistory.links">{{link.href}}</div>
-            <div class="detail-fetch" v-for="script in currentHistory.scripts">{{script.src}}</div>
+            <p class="detail-fetch-url" v-show="currentHistory.status >= 0">{{currentHistory.url}}</p>
+            <ol class="detail-fetch-ol">
+              <li v-if="currentHistory.icon">
+                <a class="detail-fetch" target="_blank" :href="currentHistory.icon.href">{{currentHistory.icon.href}}</a>
+              </li>
+              <li v-for="link in currentHistory.links">
+                <a class="detail-fetch" target="_blank" :href="link.href">{{link.href}}</a>
+              </li>
+              <li v-for="script in currentHistory.scripts">
+                <a class="detail-fetch" target="_blank" :href="script.src">{{script.src}}</a>
+              </li>
+              <li v-for="img in currentHistory.imgs">
+                <a class="detail-fetch" target="_blank" :href="img.src">{{img.src}}</a>
+              </li>
+            </ol>
           </div>
-          <div class="detail-setting">
-            <div class="sButton">分析</div>
-            <div class="sButton">打包</div>
-            <div class="sButton">下载</div>
+          <div class="detail-setting" :class="{readonly : !(currentHistory.status >= 0)}">
+            <div class="sButton" @click="analysis(currentHistory)">重新分析</div>
+            <input class="sInput detail-setting-filename" type="text" placeholder="下载文件名" v-model="currentHistory.filename" />
+            <div class="sButton" :class="{readonly : !(currentHistory.status === 2)}" @click="download(currentHistory)">下载</div>
           </div>
         </div>
       </div>
+      <a style="display: none" ref="download" href="" :download="currentHistory.filename"></a>
     </div>
   </body>
 
@@ -59,16 +74,29 @@
       el: '#app',
       data() {
         return {
+          isShowHelpBox: false,
           targetUrl: window.location.href,
           historys: [],
           currentHistory: {},
         };
       },
       methods: {
-        fetch(url) {
+        setCurrentHistory(history) {
+          this.currentHistory = history;
+        },
+        fetch(url, type) {
           return new Promise((resolve, reject) => {
             fetch(url)
-              .then((response) => response.text())
+              .then((response) => {
+                if (!response.ok) {
+                  throw new Error('');
+                  return;
+                }
+                if (type === 'blob') {
+                  return response.blob();
+                }
+                return response.text();
+              })
               .then((data) => resolve(data))
               .catch((error) => reject(error));
           });
@@ -77,18 +105,25 @@
           const url = this.targetUrl.trim();
           if (url == '') return;
           this.targetUrl = '';
+          const urlSplit = url.split('?')[0].split('/');
+          let filename = urlSplit.pop();
+          while (urlSplit.length && filename == '') {
+            filename = urlSplit.pop();
+          }
+          filename += filename.endsWith('.html') ? '' : '.html';
           const history = {
             id: Date.now(),
-            // -1：网址错误 [待分析，分析中, 分析完成可组合资源，组合资源完成可下载]
+            // -1：网址错误 [待分析，分析中, 分析完成可下载]
             status: 0,
             url,
             html: '',
+            outerHTML: '',
+            dom: null,
             links: [],
             scripts: [],
+            filename,
           };
           this.currentHistory = history;
-          console.log(this.currentHistory);
-
           this.historys.unshift(history);
           this.analysis(history);
         },
@@ -98,62 +133,80 @@
             this.fetch(history.url)
               .then((html) => {
                 history.html = html;
-                const htmlRoot = domParser.parseFromString(html, 'text/html');
-                history.scripts = htmlRoot.querySelectorAll('script[src]');
-                history.links = htmlRoot.querySelectorAll('link[rel="stylesheet"][href]');
+                history.dom = domParser.parseFromString(html, 'text/html');
+                history.icon = history.dom.querySelector('link[rel="icon"][href]');
+                history.scripts = history.dom.querySelectorAll('script[src]');
+                history.links = history.dom.querySelectorAll('link[rel="stylesheet"][href]');
+                history.imgs = history.dom.querySelectorAll('img[src]');
                 history.status = 2;
+                this.saveHistory();
               })
-              .catch(() => {
+              .catch((error) => {
                 history.status = -1;
               });
           } else {
             history.status = -1;
           }
         },
-        async pack(history) {
-          const url = this.targetUrl.trim();
-          if (url == '') return;
-          this.message = '打包中...';
-          const html = await this.fetch(url);
-          const htmlRoot = domParser.parseFromString(html, 'text/html');
-          for (const script of htmlRoot.querySelectorAll('script[src]')) {
-            let src = script.getAttribute('src');
-            if (!src.startsWith('http://') && !src.startsWith('https://')) {
-              src = `${url}/../${src}`;
-            }
-            const newScript = document.createElement('script');
-            newScript.innerHTML = await this.fetch(src);
-            script.parentElement.appendChild(newScript);
-            script.parentElement.removeChild(script);
-          }
-          for (const link of htmlRoot.querySelectorAll('link[rel="stylesheet"][href]')) {
-            let href = link.getAttribute('href');
-            if (!href.startsWith('http://') && !href.startsWith('https://')) {
-              href = `${url}/../${href}`;
-            }
-            const style = document.createElement('style');
-            style.innerHTML = await this.fetch(href);
-            link.parentElement.appendChild(style);
-            link.parentElement.removeChild(link);
-          }
-          const outerHTML = [...htmlRoot.childNodes].reduce((outerHTML, node) => {
-            return outerHTML + (node.outerHTML || '');
-          }, '<!DOCTYPE html>');
-          let filename = url.split('/').pop();
-          filename += filename.endsWith('.html') ? '' : '.html';
-          this.download(filename, outerHTML);
-          this.message = '输入地址，点击生成按钮打包html页面。';
+        blobToDataURL(blob) {
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
         },
-        download(history) {},
-        download(filename, text) {
-          var element = document.createElement('a');
-          element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
-          element.setAttribute('download', filename);
-          element.style.display = 'none';
-          document.body.appendChild(element);
-          element.click();
-          document.body.removeChild(element);
+        async download(history) {
+          if (!history.outerHTML) {
+            if (history.icon) {
+              const iconBlob = await this.fetch(history.icon.href, 'blob');
+              history.icon.href = await this.blobToDataURL(iconBlob);
+            }
+            for (const script of history.scripts) {
+              const newScript = document.createElement('script');
+              newScript.innerHTML = await this.fetch(script.src);
+              script.parentElement.appendChild(newScript);
+              script.parentElement.removeChild(script);
+            }
+            for (const link of history.links) {
+              const style = document.createElement('style');
+              style.innerHTML = await this.fetch(link.href);
+              link.parentElement.appendChild(style);
+              link.parentElement.removeChild(link);
+            }
+            for (const img of history.imgs) {
+              const imgBlob = await this.fetch(img.src, 'blob');
+              img.src = await this.blobToDataURL(imgBlob);
+            }
+            history.outerHTML = [...history.dom.childNodes].reduce((outerHTML, node) => {
+              return outerHTML + (node.outerHTML || '');
+            }, '<!DOCTYPE html>');
+          }
+          this.$refs.download.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(history.outerHTML));
+          this.$refs.download.setAttribute('download', history.filename);
+          this.$refs.download.click();
+          this.$forceUpdate();
         },
+        saveHistory() {
+          const historys = this.historys
+            .filter((history) => history.status >= 0)
+            .map((history) => ({
+              id: history.id,
+              status: 0,
+              url: history.url,
+              filename: history.filename,
+            }))
+            .slice(0, 100);
+          localStorage.setItem('history', JSON.stringify(historys));
+        },
+      },
+      created() {
+        const historysJson = localStorage.getItem('history');
+        try {
+          const historys = JSON.parse(historysJson);
+          if (historys instanceof Array) {
+            this.historys = historys;
+          }
+        } catch (error) {}
       },
     });
   </script>

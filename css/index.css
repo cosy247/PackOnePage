@@ -8,9 +8,8 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 100vw;
-  min-height: 100vh;
-  background: url('../imgs/back.jpg') 50% / cover;
+  width: 100vw;
+  height: 100vh;
 }
 
 .readonly {
@@ -18,8 +17,18 @@ body {
   filter: grayscale(1);
 }
 
+.background {
+  position: fixed;
+  z-index: -1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .root {
-  min-height: 80vh;
+  height: 80vh;
   width: 75vw;
   min-width: 900px;
   gap: 20px;
@@ -40,13 +49,21 @@ body {
   border: #fff 2px solid;
 }
 
-.title > img {
+.title-icon {
   height: 1.4em;
+}
+
+.title-help {
+  height: 1em;
+  opacity: 0.7;
+  margin-right: -20px;
+  cursor: pointer;
 }
 
 .main {
   display: flex;
   gap: 20px;
+  height: 0px;
   flex: 1;
   border: 2px solid #000a64;
   border-radius: 10px;
@@ -119,13 +136,69 @@ body {
 }
 
 .detail-fetchs {
+  display: flex;
+  flex-direction: column;
   flex: 1;
   border: 2px solid #fff;
   border-radius: 5px;
   overflow: auto;
+  padding: 20px;
+}
+
+.detail-fetch-url {
+  font-size: 20px;
+  padding: 3px 10px;
+  margin: 0 auto 20px;
+  width: fit-content;
+  border: 2px solid #5488b7;
+  border-radius: 10px;
+  background: #9bc7f044;
+  word-wrap: break-word;
+  word-break: break-all;
+}
+
+.detail-fetch-ol {
+  padding-left: 40px;
+  flex: 1;
+  overflow: auto;
+}
+
+.detail-fetch-ol::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.detail-fetch-ol::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  background: #fff8;
+}
+
+.detail-fetch {
+  margin-top: 10px;
+  display: block;
+  color: black;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  width: fit-content;
+  padding-bottom: 2px;
+  word-wrap: break-word;
+  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.detail-fetch:hover {
+  text-decoration: underline;
 }
 
 .detail-setting {
   display: flex;
   gap: 10px;
+}
+
+.detail-setting-filename {
+  flex: 1;
 }
