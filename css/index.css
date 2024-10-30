@@ -122,6 +122,7 @@ body {
   padding: 5px;
   border-radius: 5px;
   cursor: pointer;
+  direction: rtl;
 }
 
 .urlInput-history-url.current {
