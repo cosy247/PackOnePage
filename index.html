@@ -8,6 +8,7 @@
         <link rel="stylesheet" href="./css/index.css" />
         <link rel="icon" href="./icon/icon.ico" />
         <script src="./js/vue.min.js"></script>
+        <script src="./js/jszip.min.js"></script>
     </head>
 
     <body>
@@ -238,7 +239,7 @@
                         reader.readAsDataURL(blob);
                     });
                 },
-                async download(history) {
+                async getOuterHTML(history) {
                     if (!history.outerHTML) {
                         if (history.icon) {
                             const iconBlob = await this.fetch(history.icon.fetchUrl, 'blob');
@@ -264,9 +265,12 @@
                             return outerHTML + (node.outerHTML || '');
                         }, '<!DOCTYPE html>');
                     }
+                    return history.outerHTML;
+                },
+                download(history) {
                     this.$refs.download.setAttribute(
                         'href',
-                        'data:text/plain;charset=utf-8,' + encodeURIComponent(history.outerHTML)
+                        'data:text/plain;charset=utf-8,' + encodeURIComponent(this.getOuterHTML(history))
                     );
                     this.$refs.download.setAttribute('download', history.filename);
                     this.$refs.download.click();
@@ -290,7 +294,20 @@
                     this.historys.forEach((his) => this.analysis(his));
                 },
                 downloadAll() {
-                    this.historys.forEach((his) => his.status === 2 && this.download(his));
+                    const zip = new JSZip();
+                    this.historys.forEach((his) => {
+                        if (his.status !== 2) return;
+                        zip.file(his.filename, this.getOuterHTML(his));
+                    });
+                    // 生成zip文件并下载
+                    zip.generateAsync({
+                        type: 'blob',
+                    }).then((content) => {
+                        this.$refs.download.setAttribute('href', URL.createObjectURL(content));
+                        this.$refs.download.setAttribute('download', 'PackOnePage.zip');
+                        this.$refs.download.click();
+                        this.$forceUpdate();
+                    });
                 },
                 deleteHis(index) {
                     this.historys.splice(index, 1);
